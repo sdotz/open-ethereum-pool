@@ -1,0 +1,41 @@
+version: '3'
+volumes:
+  open-ethereum-pool-www-vol:
+  open-ethereum-pool-redis-vol:
+services:
+  oep-api:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    command: "/go/bin/open-ethereum-pool config.json"
+    links:
+      - redis
+    ports:
+      - 8080
+      - 8888
+      - 8008
+  oep-fe-build:
+    build:
+      context: ./www
+      dockerfile: Dockerfile
+    command: "./build.sh"
+    volumes:
+      - open-ethereum-pool-www-vol:/out
+  redis:
+    image: redis:3.0.7
+    volumes:
+      - open-ethereum-pool-redis-vol:/data
+    ports:
+      - 6379
+  nginx:
+    image: nginx:1.13.1
+    volumes:
+      - ./misc/nginx-default.conf:/etc/nginx/conf.d/default.conf:ro
+      - open-ethereum-pool-www-vol:/www:ro
+    ports:
+      -  "8080:80"
+    links:
+      - oep-api
+
+
+
