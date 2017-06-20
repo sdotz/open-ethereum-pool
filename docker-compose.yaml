@@ -1,37 +1,53 @@
 version: '3'
 volumes:
+  open-ethereum-pool-api-vol:
   open-ethereum-pool-www-vol:
   open-ethereum-pool-redis-vol:
 services:
   oep-api:
-    build:
-      context: ./
-      dockerfile: Dockerfile
-    command: "/go/bin/open-ethereum-pool config.json"
+    working_dir: /go/src/github.com/sammy007/open-ethereum-pool
+    command: bash -c "go get -v ./... && go run main.go config.json"
+    image: golang:1.8
+    volumes:
+      - open-ethereum-pool-api-vol:/go
+      - ./:/go/src/github.com/sammy007/open-ethereum-pool
     links:
       - redis
+      - geth-1
+      - geth-2
     ports:
-      - 8080
-      - 8888
-      - 8008
-  oep-fe-build:
-    build:
-      context: ./www
-      dockerfile: Dockerfile
-    command: "./build.sh"
-    volumes:
-      - open-ethereum-pool-www-vol:/out
+      - "8081:8080"
+      - "8888:8888"
+      - "8008:8008"
   redis:
     image: redis:3.0.7
     volumes:
       - open-ethereum-pool-redis-vol:/data
     ports:
       - 6379
+  geth-1:
+    image: ethereum/client-go:latest
+    command: geth --rpc --rpcaddr 0.0.0.0 --cache=512 init /genesis.json
+    ports:
+      - 8545
+      - 30303
+    volumes:
+      - ./genesis.json:/genesis.json
+      - ~/ethereum:/root
+  geth-2:
+    image: ethereum/client-go:latest
+    command: geth --rpc --rpcaddr 0.0.0.0 --cache=512 init /genesis.json
+    ports:
+      - 8545
+      - 30303
+    volumes:
+      - ./genesis.json:/genesis.json
+      - ~/ethereum:/root
   nginx:
     image: nginx:1.13.1
     volumes:
       - ./misc/nginx-default.conf:/etc/nginx/conf.d/default.conf:ro
-      - open-ethereum-pool-www-vol:/www:ro
+      - ./www:/www:ro
     ports:
       -  "8080:80"
     links:
